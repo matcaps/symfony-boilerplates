@@ -1,0 +1,78 @@
+version: "3.8"
+
+services:
+  reverse-proxy:
+    # The official v2 Traefik docker image
+    image: traefik:v2.3
+    # Enables the web UI and tells Traefik to listen to docker
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.mysql.address=:3306"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - parisportif
+
+  php74:
+    restart: always
+    build:
+      context: docker/php-7.4
+      dockerfile: Dockerfile
+    networks:
+      - parisportif
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.php74.rule=Host(`php.docker.localhost`)"
+      - "traefik.http.routers.php.entrypoints=web"
+    environment:
+      #      GOTENBERG_URL: gotenberg
+      #      DATABASE_URL: mysql://root:root@database/onlinegame?serverVersion=5.7
+      APACHE_DOCUMENT_ROOT: /app/web/public
+      APACHE_SERVER_ADMIN: moi@email.com
+    volumes:
+      - ./:/app/web:delegated
+
+  mail:
+    image: mailhog/mailhog
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - parisportif
+    labels:
+      - "traefik.http.routers.mail.rule=Host(`mail.docker.localhost`)"
+      - "traefik.port=8025"
+      - "traefik.http.services.mail.loadbalancer.server.port=8025"
+
+  mysql:
+    image: mysql:5.7
+    networks:
+      - parisportif
+    volumes:
+      - ./data/db:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    networks:
+      - parisportif
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pma.rule=Host(`pma.docker.localhost`)"
+      - "traefik.http.routers.pma.entrypoints=web"
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: root
+
+networks:
+  parisportif:
+    external: true

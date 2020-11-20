@@ -1,0 +1,13 @@
+parameters:
+  level: 8
+  paths:
+    - ./src
+
+  checkMissingIterableValueType: false
+  ignoreErrors:
+    #-
+    #  message: '#Undefined variable: \$this#'
+    #  path: Domain/tests/*
+#    -
+#      message: '#Access to an undefined property#'
+#      path: tests/*
